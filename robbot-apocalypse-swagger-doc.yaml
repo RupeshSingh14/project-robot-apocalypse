@@ -1,0 +1,225 @@
+openapi: 3.0.1
+info:
+  title: robot-apocalypse
+  description: 'This document contains specifications of a spring boot java application "robot-apocalypse", exposing REST APIs to add survivor, update his/her last location, report a survivors infected status, and retrieve live reports comprising of infected and non-infected survivors percentage, list of infected and non  infected survivors, as well as list of robots. This application uses an in memory database H2 which can be swapped with any alternate database with some minimal external properties configuration. This yml document can be better viewed over browser using: https://editor.swagger.io/'
+  version: 1.0.1
+servers:
+  - url: 'https://localhost:8082'
+paths:
+  '/survivors/addSurvivor':
+    post:
+      tags:
+        - add survivor
+      summary: adds the provided survivor
+      description: 'This endpoint expects a unique survivor details in the request body and persists the data in DB.'
+      operationId: addSurvivor
+      requestBody:
+        required: true
+        description: the provided Id for survivor registration should always be unique
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/Survivor'
+                - type: object
+      responses:
+        '201':
+          description: Created
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'        
+  '/survivors/updateSurvivor/lastLocation/{id}': 
+    put:
+      tags:
+        - update survivor
+      summary: updates the last location of a survivor
+      description: This end point updates the last location of a survivor based on provided survivor's id in the request's path variable if its exists in DB.
+      operationId: availableSlots
+      parameters:
+        - name: id
+          in: path
+          description: an id of any existing survivor
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        description: values of latitide and longitude to update the last location of a survivor
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/LastLocation'
+                - type: object      
+      responses:
+        '202':
+          description: accepted
+        '404':
+          description: Details not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'  
+  '/survivors/updateSurvivor/infectedStatus': 
+    put:
+      tags:
+        - update survivor infected status
+      summary: updates the infected status of a survivor reported by reporter
+      description: This end point updates the infected status of an existing survivor upon getting reported by three different reporters.
+      operationId: infectedStatus
+      parameters:
+        - name: survivorId
+          in: query
+          description: id of any existing survivor in records
+          required: true
+          schema:
+            type: string
+            example: RS123
+        - name: reporterId
+          in: query
+          description: id of a reporter who has not reported the same survivor previously.
+          required: true
+          schema:
+            type: string
+            example: SP007
+      responses:
+        '202':
+          description: Accepted
+        '404':
+          description: Details not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'  
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'  
+  '/survivors/reports': 
+    get:
+      tags:
+        - fetch reports
+      summary: gets the report from the records
+      description: This end point provides the realtime insights by providing details like infected and non-infected survivors percentage, list of infected and non infected survivors, as well as list of robots
+      operationId: reports
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Reports'
+components:
+  schemas:
+    Survivor:
+      type: object
+      properties:
+        id:
+          type: string
+          example: RS123
+        name:
+          type: string
+          example: Hari
+        age:
+          type: integer
+          example: 30
+        gender:
+          type: string
+          enum: [Male, Female, Others]
+        lastLocation:
+          allOf:
+            - $ref: '#/components/schemas/LastLocation'
+            - type: object
+        resources:
+          allOf:
+            - $ref: '#/components/schemas/Resources'
+            - type: object
+    LastLocation :
+      type: object
+      properties:
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+    Resources :
+      type: object
+      properties:
+        water:
+          type: boolean
+        food:
+          type: boolean
+        medication:
+          type: boolean
+        ammunition:
+          type: boolean
+    Reports :
+      type: object
+      properties: 
+        infectedSurvivors:
+          type: number
+          format: double
+        nonInfectedSurvivors:
+          type: number
+          format: double
+        infectedSurvivorsList:
+          type: array
+          items: 
+            type: object
+            properties:
+              Survivor:
+                allOf:
+                 - $ref: '#/components/schemas/Survivor'
+                 - type: object
+        nonInfectedSurvivorsList:
+          type: array
+          items: 
+            type: object
+            properties:
+              Survivor:
+                allOf:
+                 - $ref: '#/components/schemas/Survivor'
+                 - type: object
+        robots:
+           type: array
+           items: 
+            type: object
+            properties:
+              Survivor:
+                allOf:
+                 - $ref: '#/components/schemas/Robot'
+                 - type: object
+    Robot:
+      type: object
+      properties:
+        model:
+          type: string
+          example: 0JTQI
+        serialNumber:
+          type: string
+          example: VVJH2YK5EK91J0C
+        manufacturedDate:
+          type: string
+          format: date
+          example: 2022-02-23T111256.3422021
+        category:
+          type: string
+          enum: [Land, Flying]
+          
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          example: 404
+        message:
+          type: string
+          example: survivor record does not exists
